@@ -1,22 +1,13 @@
 use std::{sync::mpsc::channel, thread};
 
 use crate::{
-    peers::server::RServer,
-    protocol::message::{RChannelMessage, RMessage},
-    schema::nodes::{self, all_columns},
-    utils::configs::RConfigNode,
+    models::utils::error::RDatabaseError, peers::server::RServer, protocol::message::{RMessage, RMessageTrait}, schema::nodes::{self, all_columns}, utils::configs::RConfigNode
 };
 
 use diesel::{associations::HasTable, prelude::*};
 use log::error;
 use uuid::Uuid;
 use websocket::{ClientBuilder, OwnedMessage};
-
-#[derive(Debug)]
-pub enum ErrorRNode {
-    NodeNotExistsInDatabase,
-    DieselResult(diesel::result::Error),
-}
 
 #[derive(Queryable, Selectable, Insertable, serde::Serialize, serde::Deserialize, Clone, Debug)]
 #[diesel(table_name = nodes)]
@@ -50,7 +41,7 @@ impl RNode {
         }
     }
 
-    pub fn get_all(conn: &mut SqliteConnection) -> Result<Vec<RNode>, ErrorRNode> {
+    pub fn get_all(conn: &mut SqliteConnection) -> Result<Vec<RNode>, RDatabaseError> {
         use crate::schema::nodes::dsl::*;
 
         let results = nodes::table().select(all_columns).load::<RNode>(conn);
@@ -58,7 +49,7 @@ impl RNode {
         if results.is_ok() {
             return Ok(results.unwrap());
         } else {
-            return Err(ErrorRNode::DieselResult(results.unwrap_err()));
+            return Err(RDatabaseError::DieselResult(results.unwrap_err()));
         }
     }
 
@@ -119,7 +110,7 @@ impl RNode {
     pub fn get_by_uid(
         conn: &mut SqliteConnection,
         search_uid: String,
-    ) -> Result<RNode, ErrorRNode> {
+    ) -> Result<RNode, RDatabaseError> {
         use crate::schema::nodes::dsl::*;
 
         let result = nodes::table()
@@ -130,7 +121,7 @@ impl RNode {
         if result.is_ok() {
             return Ok(result.unwrap());
         } else {
-            return Err(ErrorRNode::DieselResult(result.unwrap_err()));
+            return Err(RDatabaseError::DieselResult(result.unwrap_err()));
         }
     }
 
@@ -139,7 +130,7 @@ impl RNode {
         data_host: String,
         data_port: i32,
         data_local: bool,
-    ) -> Result<RNode, ErrorRNode> {
+    ) -> Result<RNode, RDatabaseError> {
         let node = RNode {
             local: data_local,
             uid: Uuid::new_v4().to_string(),
@@ -154,7 +145,7 @@ impl RNode {
         if result.is_ok() {
             return RNode::get_by_uid(conn, node.uid);
         } else {
-            return Err(ErrorRNode::DieselResult(result.unwrap_err()));
+            return Err(RDatabaseError::DieselResult(result.unwrap_err()));
         }
     }
 
@@ -162,7 +153,7 @@ impl RNode {
         conn: &mut SqliteConnection,
         data_host: String,
         data_port: i32,
-    ) -> Result<RNode, ErrorRNode> {
+    ) -> Result<RNode, RDatabaseError> {
         return RNode::create(conn, data_host, data_port, true);
     }
 
@@ -170,7 +161,7 @@ impl RNode {
         conn: &mut SqliteConnection,
         data_host: String,
         data_port: i32,
-    ) -> Result<RNode, ErrorRNode> {
+    ) -> Result<RNode, RDatabaseError> {
         return RNode::create(conn, data_host, data_port, false);
     }
 
@@ -183,7 +174,7 @@ impl RNode {
             .unwrap();
 
         let request = RMessage {
-            request_type: crate::protocol::message::RMessageType::UidRequest,
+            _type: crate::protocol::message::RMessageType::UidRequest,
             data: None,
         };
 

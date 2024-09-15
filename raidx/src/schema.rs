@@ -17,6 +17,28 @@ diesel::table! {
 }
 
 diesel::table! {
+    messages_incoming (id) {
+        id -> Integer,
+        uid -> Text,
+        message_type -> Text,
+        data -> Nullable<Binary>,
+        from -> Text,
+        created_at -> Integer,
+    }
+}
+
+diesel::table! {
+    messages_outgoing (id) {
+        id -> Integer,
+        uid -> Text,
+        message_type -> Text,
+        data -> Nullable<Binary>,
+        to -> Text,
+        created_at -> Integer,
+    }
+}
+
+diesel::table! {
     nodes (uid) {
         uid -> Text,
         host -> Text,
@@ -26,8 +48,12 @@ diesel::table! {
 }
 
 diesel::joinable!(files -> nodes (node));
+diesel::joinable!(messages_incoming -> nodes (from));
+diesel::joinable!(messages_outgoing -> nodes (to));
 
 diesel::allow_tables_to_appear_in_same_query!(
     files,
+    messages_incoming,
+    messages_outgoing,
     nodes,
 );

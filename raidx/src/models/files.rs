@@ -5,14 +5,7 @@ use crate::schema::files::{self, all_columns};
 use diesel::{associations::HasTable, prelude::*};
 use sha1::{Digest, Sha1};
 
-use super::nodes::RNode;
-
-#[derive(Debug)]
-pub enum ErrorRFile {
-    FileNotExistsInDatabase,
-    DieselResult(diesel::result::Error)
-}
-
+use super::{utils::error::RDatabaseError, nodes::RNode};
 
 #[derive(Queryable, Selectable, serde::Serialize, serde::Deserialize, Clone, Debug)]
 #[diesel(table_name = files)]
@@ -105,7 +98,7 @@ impl RFile {
         return RFile::get_abspath(self.folder.clone(), self.filename.clone());
     }
 
-    pub fn check_sync(&mut self, conn: &mut SqliteConnection) -> Result<usize, ErrorRFile> {
+    pub fn check_sync(&mut self, conn: &mut SqliteConnection) -> Result<usize, RDatabaseError> {
         use crate::schema::files::dsl::*;
 
         let abspath = self.abspath();
@@ -125,11 +118,11 @@ impl RFile {
             self.sync = path_exists;
             return Ok(result.unwrap());
         } else {
-            return Err(ErrorRFile::DieselResult(result.unwrap_err()));
+            return Err(RDatabaseError::DieselResult(result.unwrap_err()));
         }
     }
 
-    pub fn refresh(&mut self, conn: &mut SqliteConnection) -> Result<&mut Self, ErrorRFile> {
+    pub fn refresh(&mut self, conn: &mut SqliteConnection) -> Result<&mut Self, RDatabaseError> {
         let result = RFile::get_by_uid(conn, self.uid.clone());
 
         if result.is_some() {
@@ -152,7 +145,7 @@ impl RFile {
 
             return Ok(self);
         } else {
-            return Err(ErrorRFile::FileNotExistsInDatabase);
+            return Err(RDatabaseError::EntryNotExists);
         }
     }
 }
@@ -182,7 +175,7 @@ impl NewRFile {
         conn: &mut SqliteConnection,
         node: &RNode,
         entry: &std::path::Path,
-    ) -> Result<RFile, ErrorRFile> {
+    ) -> Result<RFile, RDatabaseError> {
         let uid = RFile::calc_uid(entry);
         let folder = entry.parent().unwrap().to_str().unwrap().to_string();
         let filename = entry.file_name().unwrap().to_str().unwrap().to_string();
@@ -223,7 +216,7 @@ impl NewRFile {
         return RFile::from_new_rfile(conn, self);
     }
 
-    pub fn save(self, conn: &mut SqliteConnection) -> Result<RFile, ErrorRFile> {
+    pub fn save(self, conn: &mut SqliteConnection) -> Result<RFile, RDatabaseError> {
         let result = diesel::insert_into(files::table)
             .values(&self)
             .execute(conn);
@@ -234,10 +227,10 @@ impl NewRFile {
             if file.is_some() {
                 return Ok(file.unwrap());
             } else {
-                return Err(ErrorRFile::FileNotExistsInDatabase);
+                return Err(RDatabaseError::EntryNotExists);
             }
         } else {
-            return Err(ErrorRFile::DieselResult(result.err().unwrap()));
+            return Err(RDatabaseError::DieselResult(result.err().unwrap()));
         }
     }
 }

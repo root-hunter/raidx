@@ -1,19 +1,20 @@
+extern crate strum_macros;
 use diesel::SqliteConnection;
 use serde::{Deserialize, Serialize};
 
 use crate::models::{files::NewRFile, nodes::RNode};
-pub trait RChannelMessage<T> {
+pub trait RMessageTrait<T> {
     fn from_slice(data: Vec<u8>) -> Result<T, serde_json::Error>;
     fn to_slice(&self) -> Result<Vec<u8>, serde_json::error::Error>;
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RMessage {
-    pub request_type: RMessageType,
+    pub _type: RMessageType,
     pub data: Option<Vec<u8>>
 }
 
-impl RChannelMessage<RMessage> for RMessage {
+impl RMessageTrait<RMessage> for RMessage {
     fn from_slice(data: Vec<u8>) -> Result<RMessage, serde_json::Error> {
         return serde_json::from_slice(data.as_slice());
     }
@@ -36,7 +37,7 @@ pub struct RMSyncFiles {
     pub files: Vec<NewRFile>
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, strum_macros::Display)]
 pub enum RMessageType {
     OK,
     Error,
@@ -48,7 +49,7 @@ pub enum RMessageType {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RMUidRequest;
 
-impl RChannelMessage<RMUidRequest> for RMUidRequest {
+impl RMessageTrait<RMUidRequest> for RMUidRequest {
     fn from_slice(data: Vec<u8>) -> Result<RMUidRequest, serde_json::Error> {
         return serde_json::from_slice(data.as_slice());
     }
@@ -64,7 +65,7 @@ pub struct RMUidRespose {
     pub uid: String
 }
 
-impl RChannelMessage<RMUidRespose> for RMUidRespose {
+impl RMessageTrait<RMUidRespose> for RMUidRespose {
     fn from_slice(data: Vec<u8>) -> Result<RMUidRespose, serde_json::Error> {
         return serde_json::from_slice(data.as_slice());
     }
@@ -87,7 +88,7 @@ impl RMessage {
    
  
     pub fn get_content(self, conn: &mut SqliteConnection) -> RContentKind {
-        return match self.request_type {
+        return match self._type {
             RMessageType::OK => RContentKind::OK(RMOk{}),
             RMessageType::UidRequest => RContentKind::UidRequest(RMUidRequest{}),
             RMessageType::UidResponse => {

@@ -3,7 +3,7 @@ extern crate websocket;
 use std::thread;
 
 use crate::models::nodes::RNode;
-use crate::protocol::message::{RChannelMessage, RMUidRespose};
+use crate::protocol::message::{RMessageTrait, RMUidRespose};
 use crate::utils::configs::{self, RConfig, RConfigNode};
 
 use super::super::protocol::message::{RContentKind, RMessage};
@@ -85,7 +85,7 @@ pub fn init(configs_path: String) {
                         }.to_slice().unwrap();
 
                         let message = RMessage{
-                            request_type: crate::protocol::message::RMessageType::UidResponse,
+                            _type: crate::protocol::message::RMessageType::UidResponse,
                             data: Some(data)
                         };
 
