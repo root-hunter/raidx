@@ -3,4 +3,4 @@ raid
 test
 target
 dev
-./.env
+\.env
