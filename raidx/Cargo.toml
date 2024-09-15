@@ -1,0 +1,29 @@
+[package]
+name = "raidx"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sha1 = { version = "0.10.6" }
+notify = { version = "6.1.1" }
+glob = { version = "0.3.1" }
+websocket = { version = "0.27.1" }
+log = { version = "0.4" }
+env_logger = { version = "0.11.5" }
+diesel = { version = "2.2.4", features = ["sqlite"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0" }
+clap = { version = "4.5.17" }
+futures = { version = "0.3.30" }
+tokio = { version = "1.40", features = ["full"] }
+
+[dependencies.uuid]
+version = "1.10.0"
+features = [
+    "v4",                # Lets you generate random UUIDs
+    "fast-rng",          # Use a faster (but still sufficiently random) RNG
+    "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
+]
+
+#[features]
+#models = ["log", "diesel", "serde", "serde_json", "sha1"]

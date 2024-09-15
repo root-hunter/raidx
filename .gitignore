@@ -1,0 +1,6 @@
+*.db
+raid
+test
+target
+dev
+./.env

@@ -1,0 +1,18 @@
+{
+  "folder_path": "/home/roothunter/Dev/raidx/test/raid2",
+  "server": {
+    "host": "0.0.0.0",
+    "port": 4200,
+    "ssl": false
+  },
+  "synchronizer": {
+    "timeout": 2
+  },
+  "watcher": {},
+  "database": {
+    "path": "/home/roothunter/Dev/raidx/config/raid2/raidx.database.db"
+  },
+  "nodes": [
+    { "host": "127.0.0.1", "port": 4100, "ssl": false }
+  ]
+}

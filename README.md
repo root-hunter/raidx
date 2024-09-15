@@ -1,0 +1,16 @@
+# raidx
+
+## MODELS
+### NODES
+### FILES
+
+## PEERS
+### SERVER
+### SYNCHRONIZER
+### WATCHER
+
+## PROTOCOL
+### MESSAGE
+
+## UTILS
+### CONFIGS
