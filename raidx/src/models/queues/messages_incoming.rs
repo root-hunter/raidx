@@ -119,4 +119,34 @@ impl RMessageQueue<RMessagesIncoming> for RMessagesIncoming {
             return Err(RDatabaseError::EntryNotExists);
         }
     }
+
+    fn last_n(conn: &mut SqliteConnection, n: usize) -> Option<Vec<RMessagesIncoming>> {
+        use crate::schema::messages_incoming::dsl::*;
+
+        let result = messages_incoming::table()
+            .select(messages_incoming::all_columns())
+            .order_by(created_at.desc())
+            .limit(n as i64)
+            .load::<RMessagesIncoming>(conn);
+
+        if result.is_ok() {
+            let result = result.unwrap();
+            return Some(result);
+        } else {
+            return None;
+        }
+    }
+
+    fn to_message(&self) -> Option<RMessage> {
+        let message_type = serde_json::from_str(self.message_type.as_str());
+
+        if message_type.is_ok() {
+            return Some(RMessage {
+                _type: message_type.unwrap(),
+                data: self.data.clone(),
+            });
+        } else {
+            return None;
+        }
+    }
 }

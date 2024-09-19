@@ -1,16 +1,14 @@
-use std::{io::stdin, path::PathBuf, thread};
+use std::path::PathBuf;
 
 use clap::value_parser;
-use diesel::{Connection, SqliteConnection};
 use env_logger;
 use log::{info, warn};
-use raidx::{peers, protocol::message::RMessage, utils::configs::RConfig};
+use raidx::{peers, utils::configs::RConfig};
 
 #[tokio::main]
 async fn main() {
     std::env::set_var("RUST_LOG", "debug");
     env_logger::init();
-    let mut runtime = tokio::runtime::Handle::current();
 
     let matches = clap::Command::new("raidx")
         .author("Antonio Ricciardi")
@@ -46,29 +44,10 @@ async fn main() {
                             "".to_string()
                         );
                     
-                        if configs.is_ok() {
-                            let configs = configs.unwrap();
-                    
-                            peers::nodes::init(configs.clone());
-
-                            let database_url = configs.database.path.clone();
-                            let mut conn = SqliteConnection::establish(database_url.as_str()).unwrap();
-                            let pool = peers::nodes::RNodesPool::load_connections(&mut conn);                  
-
-                            if pool.is_some() {
-                                let pool = pool.unwrap();
-                                info!("{:?}", pool.nodes.keys());
-                            }
-
+                        if let Ok(configs) = configs {
                             peers::watcher::init(configs.clone());
-                            
-                            peers::synchronizer::init_start(configs.clone());
-                            peers::synchronizer::init_sync(configs.clone());
-                            
-                            peers::server::init(configs_path.clone());       
-
-                            
-
+                            peers::synchronizer::init(configs.clone());
+                            peers::nodes::init(configs.clone());
                         } else {
                             panic!("Not valid configs file!");
                         }

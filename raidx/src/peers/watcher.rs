@@ -12,6 +12,10 @@ use log::{error, info, warn};
 
 use crate::models::files::{NewRFile, RFile};
 use crate::models::nodes::RNode;
+use crate::models::queues::messages::RMessageQueue;
+use crate::models::queues::messages_outgoing::RMessageOutgoing;
+use crate::protocol::message::RMessage;
+use crate::protocol::message::RMessageType;
 use crate::utils::configs::RConfig;
 
 pub fn init(configs: RConfig) {
@@ -64,8 +68,30 @@ fn watch<P: AsRef<Path>>(database_url: String, path: P) -> notify::Result<()> {
                         if file.is_ok() {
                             let file = file.unwrap();
     
-                            info!("DEAMON: new file was added {}", file.filename)
+                            info!("DEAMON: new file was added {}", file.filename);
+                            let data = serde_json::to_vec(&file);
+
+                            if data.is_ok() {
+                                let message = RMessage{
+                                    _type: RMessageType::FileAdded,
+                                    data: Some(data.unwrap()) 
+                                };
+
+                                let nodes = RNode::get_others(&mut conn);
+                                if nodes.is_some() {
+                                    for node in nodes.unwrap() {
+                                        let message = RMessageOutgoing::push(&mut conn, node.uid, message.clone());
+                                        
+                                        info!("new message outgoing: {:?}", message);
+                                    }
+                                } else {
+                                    warn!("can't get nodes");
+                                }
+                            } else {
+                                warn!("error creating new file message");
+                            }
                         } else {
+                            warn!("error adding new file to db");
                         }
                     },
                     notify::EventKind::Remove(notify::event::RemoveKind::File) => {

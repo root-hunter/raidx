@@ -1,14 +1,36 @@
 extern crate strum_macros;
 use diesel::SqliteConnection;
 use serde::{Deserialize, Serialize};
+use websocket::OwnedMessage;
 
-use crate::models::{files::NewRFile, nodes::RNode};
+use crate::models::{files::{NewRFile, RFile}, nodes::RNode};
+
+#[derive(Serialize, Deserialize, Debug, Clone, strum_macros::Display)]
+pub enum RMessageType {
+    OK,
+    Error,
+    SyncFiles,
+    FileAdded,
+    UidRequest,
+    UidResponse
+}
+
+#[derive(Debug)]
+pub enum RContentKind {
+    OK(RMOk),
+    Error(RMError),
+    SyncFiles(RMSyncFiles),
+    FileAdded(RMFileAdded),
+    UidRequest(RMUidRequest),
+    UidResponse(RMUidRespose),
+}
+
 pub trait RMessageTrait<T> {
     fn from_slice(data: Vec<u8>) -> Result<T, serde_json::Error>;
     fn to_slice(&self) -> Result<Vec<u8>, serde_json::error::Error>;
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RMessage {
     pub _type: RMessageType,
     pub data: Option<Vec<u8>>
@@ -24,29 +46,26 @@ impl RMessageTrait<RMessage> for RMessage {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RMOk;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RMError {
     pub text: String
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RMSyncFiles {
     pub files: Vec<NewRFile>
 }
 
-#[derive(Serialize, Deserialize, Debug, strum_macros::Display)]
-pub enum RMessageType {
-    OK,
-    Error,
-    SyncFiles,
-    UidRequest,
-    UidResponse
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct RMFileAdded {
+    pub file: RFile
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RMUidRequest;
 
 impl RMessageTrait<RMUidRequest> for RMUidRequest {
@@ -60,7 +79,7 @@ impl RMessageTrait<RMUidRequest> for RMUidRequest {
 }
 
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RMUidRespose {
     pub uid: String
 }
@@ -75,21 +94,44 @@ impl RMessageTrait<RMUidRespose> for RMUidRespose {
     }
 }
 
-#[derive(Debug)]
-pub enum RContentKind {
-    OK(RMOk),
-    Error(RMError),
-    SyncFiles(RMSyncFiles),
-    UidRequest(RMUidRequest),
-    UidResponse(RMUidRespose),
-}
+
 
 impl RMessage {
-   
+    pub fn to_ws_message(&self) -> Result<OwnedMessage, serde_json::Error> {
+        let message = self.to_slice();
+
+        if let Ok(message) = message {
+            return Ok(OwnedMessage::Binary(message));
+        } else {
+            return Err(message.unwrap_err());
+        }
+    }
+
+    pub fn has_data(self) -> bool {
+        return self.data.is_some();
+    }
  
     pub fn get_content(self, conn: &mut SqliteConnection) -> RContentKind {
         return match self._type {
             RMessageType::OK => RContentKind::OK(RMOk{}),
+            RMessageType::FileAdded => {
+                if self.clone().has_data() {
+                    let data = self.data.unwrap();
+                    let file = serde_json::from_slice(data.as_slice());
+
+                    if file.is_ok() {
+                        let content = RContentKind::FileAdded(RMFileAdded{
+                            file: file.unwrap()
+                        });
+
+                        return content;
+                    } else {
+                        return RContentKind::Error(RMError { text: format!("{}", file.unwrap_err()) });
+                    }
+                } else {
+                    return RContentKind::Error(RMError { text: format!("data can't be None") })
+                }
+            },
             RMessageType::UidRequest => RContentKind::UidRequest(RMUidRequest{}),
             RMessageType::UidResponse => {
                 let node = RNode::get_local(conn);

@@ -17,7 +17,6 @@ pub mod models {
 pub mod peers {
     pub mod synchronizer;
     pub mod watcher;
-    pub mod server;
     pub mod nodes;
 }
 

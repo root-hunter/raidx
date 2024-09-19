@@ -1,7 +1,7 @@
 use std::{sync::mpsc::channel, thread};
 
 use crate::{
-    models::utils::error::RDatabaseError, peers::server::RServer, protocol::message::{RMessage, RMessageTrait}, schema::nodes::{self, all_columns}, utils::configs::RConfigNode
+    models::utils::error::RDatabaseError, peers::nodes::RServer, protocol::message::{RMessage, RMessageTrait}, schema::nodes::{self, all_columns}, utils::configs::RConfigNode
 };
 
 use diesel::{associations::HasTable, prelude::*};
